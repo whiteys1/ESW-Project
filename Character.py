@@ -8,16 +8,17 @@ class Character:
         self.height = 40
         
         # 월드 좌표 (실제 맵상의 위치)
-        self.world_x = 120  # 시작 x 위치
-        self.world_y = 120  # 시작 y 위치
+        self.world_x = 24 * 1  # 시작 x 위치
+        self.world_y = height - 40 -24  # 시작 y 위치
         
         # 물리 변수
         self.velocity_y = 0
-        self.gravity = 0.5
+        self.gravity = 1.0
         self.is_jumping = False
         self.is_grounded = False
-        self.jump_speed = -10
+        self.jump_speed = -12
         self.move_speed = 5
+        self.max_fall_speed = 15  # 최대 낙하 속도 제한
         
         # 화면 표시용 position (캐릭터 그리기용)
         self.position = np.array([0, 0, self.width, self.height])
