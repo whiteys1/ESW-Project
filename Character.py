@@ -1,72 +1,94 @@
 import numpy as np
-from PIL import Image,ImageEnhance
+from PIL import Image, ImageEnhance
 
 class Character:
     def __init__(self, width, height):
-        self.width = width    # 화면 너비 저장
-        self.height = height  # 화면 높이 저장
-        self.appearance = 'circle'
-        self.state = None
-        self.position = np.array([width/2 - 20, height/2 - 20, width/2 + 20, height/2 + 20])
-        # 총알 발사를 위한 캐릭터 중앙 점 추가
-        self.center = np.array([(self.position[0] + self.position[2]) / 2, (self.position[1] + self.position[3]) / 2])
-        self.outline = "#FFFFFF"
-
-        self.image = Image.open("asset/hero.png").convert('RGBA')
-        self.image = self.image.resize((40, 40))
+        # 캐릭터 크기
+        self.width = 40
+        self.height = 40
         
-        # 이미지 밝기 조정
+        # 월드 좌표 (실제 맵상의 위치)
+        self.world_x = 120  # 시작 x 위치
+        self.world_y = 120  # 시작 y 위치
+        
+        # 물리 변수
+        self.velocity_y = 0
+        self.gravity = 0.5
+        self.is_jumping = False
+        self.is_grounded = False
+        self.jump_speed = -10
+        self.move_speed = 5
+        
+        # 화면 표시용 position (캐릭터 그리기용)
+        self.position = np.array([0, 0, self.width, self.height])
+        
+        # 이미지 로드
+        self.image = Image.open("asset/hero.png").convert('RGBA')
+        self.image = self.image.resize((self.width, self.height))
         enhancer = ImageEnhance.Brightness(self.image)
         self.image = enhancer.enhance(1.5)
-
-        # 점프 관련 변수 추가
-        self.is_jumping = False
-        self.jump_velocity = 0
-        self.jump_speed = 15  # 초기 점프 속도
-        self.gravity = 1      # 중력
-        self.ground_y = height/2 - 20  # 캐릭터의 기본 y좌표 (바닥 위치
-
-    def move(self, command = None):
-        if command['move'] == False:
-            self.state = None
-            self.outline = "#FFFFFF" #검정색상 코드!
         
+        self.state = None
+        self.outline = "#FFFFFF"
+        self.center = np.array([0, 0])  # 중심점은 화면 좌표에 따라 업데이트됨
+
+    def apply_gravity(self, world_map):
+        if not self.is_grounded:
+            self.velocity_y += self.gravity
+            self.velocity_y = min(self.velocity_y, 12)
+        
+        # 새로운 y 위치 계산
+        new_y = self.world_y + self.velocity_y
+        
+        # 발 위치의 타일 확인
+        feet_tile = world_map.get_tile(self.world_x + self.width/2, new_y + self.height)
+        
+        # 충돌 체크 및 처리
+        if feet_tile == 1:  # 벽 타일과 충돌
+            self.is_grounded = True
+            # 타일 크기로 정확히 정렬
+            new_y = ((new_y + self.height) // world_map.tile_size) * world_map.tile_size - self.height
+            self.velocity_y = 0
         else:
+            self.is_grounded = False
+        
+        self.world_y = new_y
+
+    def move(self, command, world_map):
+        if command['move']:
             self.state = 'move'
-            self.outline = "#FF0000" #빨강색상 코드!
-
-            if command['up_pressed'] and not self.is_jumping:
-                self.is_jumping = True
-                self.jump_velocity = -15  # 위쪽은 음수
-
-            if command['down_pressed']:
-                self.position[1] += 5
-                self.position[3] += 5
-
+            self.outline = "#FF0000"
+            
+            # 점프
+            if command['up_pressed'] and self.is_grounded:
+                self.velocity_y = self.jump_speed
+                self.is_grounded = False
+            
+            # 좌우 이동
             if command['left_pressed']:
-                self.position[0] -= 5
-                self.position[2] -= 5
-                
+                new_x = self.world_x - self.move_speed
+                if world_map.get_tile(new_x, self.world_y + self.height - 1) != 1:
+                    self.world_x = new_x
+            
             if command['right_pressed']:
-                self.position[0] += 5
-                self.position[2] += 5
-                
-        if self.is_jumping:
-            #print(f"Jumping: velocity={self.jump_velocity}, y={self.position[1]}")  # 디버깅용
-            # 현재 위치에 속도 적용
-            self.position[1] += self.jump_velocity
-            self.position[3] += self.jump_velocity
-            
-            # 중력 적용
-            self.jump_velocity += 1.5  # 중력 가속도
-            
-            # 바닥 충돌 체크
-            if self.position[1] >= self.height/2 - 20:  # 기존 초기 위치로 돌아옴
-                self.position[1] = self.height/2 - 20
-                self.position[3] = self.height/2 + 20
-                self.jump_velocity = 0
-                self.is_jumping = False
-               
+                new_x = self.world_x + self.move_speed
+                if world_map.get_tile(new_x + self.width, self.world_y + self.height - 1) != 1:
+                    self.world_x = new_x
+        else:
+            self.state = None
+            self.outline = "#FFFFFF"
+        
+        # 중력 적용
+        self.apply_gravity(world_map)
 
-        #center update
-        self.center = np.array([(self.position[0] + self.position[2]) / 2, (self.position[1] + self.position[3]) / 2]) 
+    def update_screen_position(self, camera_x):
+        """화면상의 위치 업데이트"""
+        screen_x = self.world_x - camera_x
+        
+        self.position[0] = screen_x
+        self.position[2] = screen_x + self.width
+        self.position[1] = self.world_y
+        self.position[3] = self.world_y + self.height
+        
+        # 중심점 업데이트
+        self.center = np.array([screen_x + self.width/2, self.world_y + self.height/2])
