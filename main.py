@@ -57,11 +57,26 @@ def main():
         max_camera_x = (len(my_map.map_data[0]) * my_map.tile_size) - joystick.width
         camera_x = max(0, min(camera_x, max_camera_x))
         
-        # 총알 발사
-        if not joystick.button_A.value and (last_shot_time + SHOT_COOLDOWN) <= 0:
-            bullets.append(Bullet(my_character.center[0], my_character.center[1], facing_direction))
+        # 총알 발사 부분
+        if not joystick.button_A.value and (last_shot_time <= 0):
+            # 캐릭터의 중앙 위치에서 총알 발사
+            bullets.append(Bullet(
+                my_character.center[0],  # 캐릭터의 가운데 x 좌표
+                my_character.center[1],  # 캐릭터의 가운데 y 좌표
+                'right'
+            ))
             last_shot_time = SHOT_COOLDOWN
-        last_shot_time -= 1
+        if last_shot_time > 0:
+            last_shot_time -= 1
+        
+        
+        # 총알 업데이트
+        for bullet in bullets[:]:
+            bullet.move()
+            if (bullet.position[0] < 0 or 
+                bullet.position[2] > joystick.width + 100 or  # 화면 밖으로 더 멀리 나가야 제거
+                bullet.state != 'active'):
+                bullets.remove(bullet)
         
         # 총알 업데이트
         for bullet in bullets[:]:
@@ -87,11 +102,12 @@ def main():
         
         # 총알 그리기
         for bullet in bullets:
-            my_draw.rectangle(
-                (bullet.position[0], bullet.position[1] + 80,
-                 bullet.position[2], bullet.position[3] + 80),
-                fill='blue'
-            )
+                # 이미지가 있는 경우 이미지로 그리기
+                my_image.paste(
+                    bullet.image.convert('RGB'),
+                    (int(bullet.position[0]), int(bullet.position[1])),
+                    bullet.image.split()[3]
+                )
         
         joystick.disp.image(my_image)
 

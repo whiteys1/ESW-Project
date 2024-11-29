@@ -1,23 +1,33 @@
 import numpy as np
+from PIL import Image
 
 class Bullet:
-    def __init__(self, position, direction):
-        self.appearance = 'rectangle'
-        self.speed = 10
-        self.damage = 10
-        self.position = np.array([position[0]-3, position[1]-3, position[0]+3, position[1]+3])
-        self.direction = direction  # 'right' 또는 'left'
+    def __init__(self, start_x, start_y, direction):
+        self.width = 10
+        self.height = 10
+        
+        # 위치 설정
+        self.position = np.array([start_x - self.width/2, 
+                                start_y - self.height/2,
+                                start_x + self.width/2,
+                                start_y + self.height/2])
+        
+        self.speed = 12
         self.state = 'active'
-        self.outline = "#0000FF"
+        self.direction = 'right'  # 항상 오른쪽으로 발사
+        
+        # 총알 이미지 로드
+        try:
+            self.image = Image.open("asset/bullet.png").convert('RGBA')
+            self.image = self.image.resize((self.width, self.height))
+        except:
+            self.image = None
+            print("Warning: bullet.png not found")
 
     def move(self):
         if self.state == 'active':
-            if self.direction == 'right':
-                self.position[0] += self.speed
-                self.position[2] += self.speed
-            else:  # direction == 'left'
-                self.position[0] -= self.speed
-                self.position[2] -= self.speed
+            self.position[0] += self.speed
+            self.position[2] += self.speed
 
     def collision_check(self, enemys):
         if self.state != 'active':
