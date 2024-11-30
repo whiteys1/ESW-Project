@@ -1,3 +1,7 @@
+from BlockPattern import grass_ground_pattern, color_map
+from PIL import Image, ImageDraw
+import numpy as np
+
 class Map:
     def __init__(self, width, height, tile_size, map_data):
         self.width = width
@@ -19,13 +23,12 @@ class Map:
                 
                 if x < len(self.map_data[0]):  # 맵 범위 체크
                     tile_type = self.map_data[y][x]
-                    color = (0, 0, 0) if tile_type == 1 else (255, 255, 255)
-                    canvas.rectangle(
-                        (screen_x, screen_y, 
-                         screen_x + self.tile_size - 1, 
-                         screen_y + self.tile_size - 1),
-                        fill=color
-                    )
+                    if tile_type == 1:  # grass_ground_pattern 사용
+                        # 패턴의 각 픽셀을 그림
+                        for py in range(24):  # 24x24 패턴
+                            for px in range(24):
+                                pixel_color = color_map[grass_ground_pattern[py][px]]
+                                canvas.point((screen_x + px, screen_y + py), fill=pixel_color)
 
     def get_tile(self, x, y):
         """실제 월드 좌표를 타일 좌표로 변환하여 해당 타일 값을 반환"""

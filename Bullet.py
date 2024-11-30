@@ -1,5 +1,6 @@
 import numpy as np
 from PIL import Image
+from BulletPattern import bullet_pattern, bullet_color_map
 
 class Bullet:
     def __init__(self, start_x, start_y, direction):
@@ -17,12 +18,10 @@ class Bullet:
         self.direction = 'right'  # 항상 오른쪽으로 발사
         
         # 총알 이미지 로드
-        try:
-            self.image = Image.open("asset/bullet.png").convert('RGBA')
-            self.image = self.image.resize((self.width, self.height))
-        except:
-            self.image = None
-            print("Warning: bullet.png not found")
+        self.image = Image.new('RGBA', (self.width, self.height))
+        for y in range(self.height):
+            for x in range(self.width):
+                self.image.putpixel((x, y), bullet_color_map[bullet_pattern[y][x]])
 
     def move(self):
         if self.state == 'active':
