@@ -1,6 +1,8 @@
-from BlockPattern import grass_ground_pattern, color_map
+from asset.BlockPattern import grass_ground_pattern, color_map
 from PIL import Image, ImageDraw
 import numpy as np
+from Enemy import Enemy
+
 
 class Map:
     def __init__(self, width, height, tile_size, map_data):
@@ -8,6 +10,18 @@ class Map:
         self.height = height
         self.tile_size = tile_size
         self.map_data = map_data
+        self.enemies = self.create_enemies()  # 여기에 추가
+
+    def create_enemies(self):
+        enemies = []
+        for y in range(len(self.map_data)):
+            for x in range(len(self.map_data[0])):
+                if self.map_data[y][x] in [3, 4, 5]:  # 적 타입 체크
+                    spawn_position = [x * self.tile_size + self.tile_size/2, 
+                                   y * self.tile_size + self.tile_size/2]
+                    enemy_type = self.map_data[y][x] - 2  # 3->1, 4->2, 5->3
+                    enemies.append(Enemy(spawn_position, enemy_type))
+        return enemies
         
     def draw(self, canvas, camera_x):
         # 화면에 그려질 타일의 시작과 끝 인덱스 계산
