@@ -1,4 +1,5 @@
 from asset.BlockPattern import grass_ground_pattern, color_map
+from Boss import Boss
 from PIL import Image, ImageDraw
 import numpy as np
 from Enemy import Enemy
@@ -27,6 +28,12 @@ class Map:
                     enemy.world_x = world_x
                     enemy.world_y = world_y
                     enemies.append(enemy)
+                elif self.map_data[y][x] == 6:  # 보스
+                    world_x = x * self.tile_size + self.tile_size/2
+                    world_y = y * self.tile_size + self.tile_size/2
+                    spawn_position = [world_x, world_y]
+                    boss = Boss(spawn_position)  # Boss 클래스의 인스턴스 생성
+                    enemies.append(boss)
         return enemies
         
     def draw(self, canvas, camera_x):

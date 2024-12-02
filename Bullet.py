@@ -124,3 +124,54 @@ class EnemyBullet(Bullet):
 
         # 두 집합의 교집합이 있으면 충돌
         return len(bullet_pixels.intersection(player_pixels)) > 0
+
+class BossBullet(Bullet):
+   def __init__(self, start_x, start_y, direction):
+       super().__init__(start_x, start_y, direction)
+       self.width = 15
+       self.height = 15
+       self.state = 'active'
+       
+       # 방향별 속도 설정
+       if direction == 'left':
+           self.speed_x = -8
+           self.speed_y = 0
+       elif direction == 'left_up':
+           self.speed_x = -8
+           self.speed_y = -8
+       elif direction == 'left_down':
+           self.speed_x = -8
+           self.speed_y = 8
+           
+       self.world_x = start_x
+       self.position = np.array([
+           start_x - self.width/2,
+           start_y - self.height/2,
+           start_x + self.width/2,
+           start_y + self.height/2
+       ])
+       
+       # 이미지 생성 
+       self.image = Image.new('RGBA', (self.width, self.height))
+       for y in range(10):
+           for x in range(10):
+               color = enemy_bullet_color_map[enemy_bullet_pattern[y][x]]
+               scale = 1.5
+               # scale x scale 크기로 확대
+               scaled_x = int(x * scale)
+               scaled_y = int(y * scale)
+               if scaled_x < self.width and scaled_y < self.height:
+                   self.image.putpixel((scaled_x, scaled_y), color)
+   
+   def move(self):
+       if self.state == 'active':
+           self.world_x += self.speed_x
+           self.position[0] += self.speed_x  
+           self.position[2] += self.speed_x
+           self.position[1] += self.speed_y
+           self.position[3] += self.speed_y
+           
+   def check_collision_with_player(self, player):
+       if self.state != 'active':
+           return False
+       return self.overlap(self.position, player.position)

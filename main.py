@@ -4,6 +4,7 @@ from Bullet import EnemyBullet,PlayerBullet
 from Character import Character
 from Joystick import Joystick
 from Map import Map
+from Boss import Boss
 
 def handle_input(joystick):
    command = {'move': False, 'up_pressed': False, 'down_pressed': False, 
@@ -36,9 +37,15 @@ def update_bullets(player_bullets, enemy_bullets, my_character, enemies, last_sh
 
     # 적 총알 발사
     for enemy in enemies:
-        if enemy.state == 'alive' and enemy.can_shoot():
-            # 적의 월드 좌표 사용
-            enemy_bullets.append(EnemyBullet(enemy.world_x, enemy.world_y))
+        for enemy in enemies:
+            if enemy.state == 'alive':
+                if isinstance(enemy, Boss):  # 보스인 경우
+                    new_bullets = enemy.shoot()  # shoot 메서드 호출
+                    enemy_bullets.extend(new_bullets)
+                else:  # 일반 적인 경우
+                    if enemy.can_shoot():
+                        enemy_bullets.append(EnemyBullet(enemy.world_x, enemy.world_y))
+
 
     # 총알 이동 및 제거
     for bullet in player_bullets[:]:
@@ -152,9 +159,9 @@ def main():
         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,5,0,0,0,1,1,1,0,0,0,0,0,0,0,4,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,5,0],
+        [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
     ]
    
