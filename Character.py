@@ -29,6 +29,14 @@ class Character:
         enhancer = ImageEnhance.Brightness(self.image)
         self.image = enhancer.enhance(1.5)
         
+        # 충돌 마스크 생성 - 투명하지 않은 픽셀의 위치 저장
+        self.collision_mask = []
+        for y in range(self.height):
+            for x in range(self.width):
+                pixel = self.image.getpixel((x, y))
+                if pixel[3] > 0:  # 알파 값이 0보다 크면 (투명하지 않으면)
+                    self.collision_mask.append((x, y))
+
         self.state = None
         self.outline = "#FFFFFF"
         self.center = np.array([0, 0])  # 중심점은 화면 좌표에 따라 업데이트됨
@@ -93,3 +101,12 @@ class Character:
         
         # 중심점 업데이트
         self.center = np.array([screen_x + self.width/2, self.world_y + self.height/2])
+
+    def get_collision_points(self):
+        """실제 충돌 체크에 사용될 월드 좌표의 픽셀 포인트들을 반환"""
+        collision_points = []
+        for local_x, local_y in self.collision_mask:
+            world_x = self.world_x + local_x
+            world_y = self.world_y + local_y
+            collision_points.append((world_x, world_y))
+        return collision_points

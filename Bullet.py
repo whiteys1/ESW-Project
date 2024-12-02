@@ -16,6 +16,7 @@ class Bullet:
         self.state = 'active'
         self.direction = direction
 
+
     def move(self):
         if self.state == 'active':
             self.position[0] += self.speed
@@ -35,6 +36,7 @@ class PlayerBullet(Bullet):
         for y in range(10):
             for x in range(10):
                 self.image.putpixel((x, y), bullet_color_map[bullet_pattern[y][x]])
+        self.world_x = start_x  # 월드 좌표 추가
 
     def collision_check(self, enemys):
         if self.state != 'active':
@@ -44,6 +46,21 @@ class PlayerBullet(Bullet):
                 enemy.take_damage()
                 self.state = 'hit'
                 break
+
+    def collision_check(self, enemies):
+        if self.state != 'active':
+            return
+            
+        bullet_world_x = self.position[0]  # 총알의 현재 화면상 x 위치
+        
+        for enemy in enemies:
+            if enemy.state == 'alive':
+                # 적과의 충돌 체크
+                if self.overlap(self.position, enemy.position):
+                    print(f"Bullet at {bullet_world_x} hit enemy at {enemy.position[0]}")
+                    enemy.take_damage()
+                    self.state = 'hit'
+                    break
 
 
 class EnemyBullet(Bullet):
@@ -74,21 +91,36 @@ class EnemyBullet(Bullet):
     def check_collision_with_player(self, player):
         if self.state != 'active':
             return False
-        
-        # 총알의 충돌 박스
+
+        # 먼저 대략적인 사각 영역 체크로 최적화
         bullet_box = np.array([
-            self.world_x - self.width/2,  # left
-            self.position[1],             # top
-            self.world_x + self.width/2,  # right
-            self.position[3]              # bottom
+            self.world_x - self.width / 2,
+            self.position[1],
+            self.world_x + self.width / 2,
+            self.position[3]
         ])
-    
-        # 플레이어의 충돌 박스
+
         player_box = np.array([
-            player.world_x,                # left
-            player.world_y,                # top
-            player.world_x + player.width, # right
-            player.world_y + player.height # bottom
+            player.world_x,
+            player.world_y,
+            player.world_x + player.width,
+            player.world_y + player.height
         ])
-    
-        return self.overlap(bullet_box, player_box)
+
+        # 사각 영역이 겹치지 않으면 충돌 없음
+        if not self.overlap(bullet_box, player_box):
+            return False
+
+        # 사각 영역이 겹치면 픽셀 단위 체크
+        bullet_left = int(self.world_x - self.width / 2)
+        bullet_top = int(self.position[1])
+
+        # 총알의 실제 픽셀과 플레이어의 실제 픽셀 간의 충돌 체크
+        bullet_pixels = set()
+        for px, py in self.collision_mask:
+            bullet_pixels.add((bullet_left + px, bullet_top + py))
+
+        player_pixels = set(player.get_collision_points())
+
+        # 두 집합의 교집합이 있으면 충돌
+        return len(bullet_pixels.intersection(player_pixels)) > 0

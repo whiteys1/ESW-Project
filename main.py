@@ -43,6 +43,8 @@ def update_bullets(player_bullets, enemy_bullets, my_character, enemies, last_sh
     # 총알 이동 및 제거
     for bullet in player_bullets[:]:
         bullet.move()
+        # 플레이어 총알과 적의 충돌 체크 추가
+        bullet.collision_check(enemies)
         if (bullet.position[0] < 0 or 
             bullet.position[2] > joystick.width + 100 or
             bullet.state != 'active'):
@@ -93,7 +95,8 @@ def draw_game(my_image, my_draw, background, my_map, my_character,
     # 적 그리기
     for enemy in my_map.enemies:
         if enemy.state == 'alive':
-            enemy_screen_x = int(enemy.position[0] - camera_x)
+            enemy.update_position(camera_x)  # 메서드 이름 다시 수정
+            enemy_screen_x = int(enemy.position[0])
             enemy_screen_y = int(enemy.position[1])
             my_image.paste(
                 enemy.image.convert('RGB'),
@@ -114,8 +117,6 @@ def draw_game(my_image, my_draw, background, my_map, my_character,
         if bullet.state == 'active':
             screen_x = int(bullet.world_x - camera_x - bullet.width/2)
             screen_y = int(bullet.position[1])
-            
-            print(f"Drawing enemy bullet: world_x={bullet.world_x}, camera_x={camera_x}, screen_x={screen_x}, screen_y={screen_y}")
             
             # 화면 범위 체크 (-10은 여유값)
             if -10 <= screen_x <= joystick.width + 10:
@@ -149,11 +150,11 @@ def main():
         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,3,0,4,0,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,5,0,0,0,0,0,5,0,0,0,1,1,1,0,0,0,0,0,0,0,4,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,5,0],
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
     ]
    
