@@ -17,10 +17,16 @@ class Map:
         for y in range(len(self.map_data)):
             for x in range(len(self.map_data[0])):
                 if self.map_data[y][x] in [3, 4, 5]:  # 적 타입 체크
-                    spawn_position = [x * self.tile_size + self.tile_size/2, 
-                                   y * self.tile_size + self.tile_size/2]
+                    # 실제 월드 좌표로 변환
+                    world_x = x * self.tile_size + self.tile_size/2
+                    world_y = y * self.tile_size + self.tile_size/2
+                    spawn_position = [world_x, world_y]
                     enemy_type = self.map_data[y][x] - 2  # 3->1, 4->2, 5->3
-                    enemies.append(Enemy(spawn_position, enemy_type))
+                    enemy = Enemy(spawn_position, enemy_type)
+                    # 월드 좌표 저장
+                    enemy.world_x = world_x
+                    enemy.world_y = world_y
+                    enemies.append(enemy)
         return enemies
         
     def draw(self, canvas, camera_x):

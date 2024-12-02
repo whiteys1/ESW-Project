@@ -23,43 +23,42 @@ def handle_input(joystick):
        
    return command
 
-def update_bullets(player_bullets, enemy_bullets, my_character, enemies, last_shot_time, joystick, SHOT_COOLDOWN):
-   # 플레이어 총알 발사
-   if not joystick.button_A.value and (last_shot_time <= 0):
-       player_bullets.append(PlayerBullet(
-           my_character.center[0],
-           my_character.center[1]
-       ))
-       last_shot_time = SHOT_COOLDOWN
-   if last_shot_time > 0:
-       last_shot_time -= 1
+def update_bullets(player_bullets, enemy_bullets, my_character, enemies, last_shot_time, joystick, SHOT_COOLDOWN, camera_x):
+    # 플레이어 총알 발사
+    if not joystick.button_A.value and (last_shot_time <= 0):
+        player_bullets.append(PlayerBullet(
+            my_character.center[0],
+            my_character.center[1]
+        ))
+        last_shot_time = SHOT_COOLDOWN
+    if last_shot_time > 0:
+        last_shot_time -= 1
 
-   # 적 총알 발사
-   for enemy in enemies:
-       if enemy.state == 'alive' and enemy.can_shoot():
-           enemy_bullets.append(EnemyBullet(
-               enemy.center[0],
-               enemy.center[1]
-           ))
+    # 적 총알 발사
+    for enemy in enemies:
+        if enemy.state == 'alive' and enemy.can_shoot():
+            # 적의 월드 좌표 사용
+            enemy_bullets.append(EnemyBullet(enemy.world_x, enemy.world_y))
 
-   # 총알 이동 및 제거
-   for bullet in player_bullets[:]:
-       bullet.move()
-       if (bullet.position[0] < 0 or 
-           bullet.position[2] > joystick.width + 100 or
-           bullet.state != 'active'):
-           player_bullets.remove(bullet)
+    # 총알 이동 및 제거
+    for bullet in player_bullets[:]:
+        bullet.move()
+        if (bullet.position[0] < 0 or 
+            bullet.position[2] > joystick.width + 100 or
+            bullet.state != 'active'):
+            player_bullets.remove(bullet)
 
-   for bullet in enemy_bullets[:]:
-       bullet.move()
-       if (bullet.position[0] < 0 or 
-           bullet.position[2] > joystick.width or
-           bullet.state != 'active'):
-           enemy_bullets.remove(bullet)
-       if bullet.check_collision_with_player(my_character):
-           return True, last_shot_time  # 게임 오버
-   
-   return False, last_shot_time
+    for bullet in enemy_bullets[:]:
+        bullet.move()
+        # 화면 범위 체크를 world 좌표로 수정
+        screen_x = bullet.world_x - camera_x
+        if (screen_x < -50 or screen_x > joystick.width + 50 or
+            bullet.state != 'active'):
+            enemy_bullets.remove(bullet)
+        if bullet.check_collision_with_player(my_character):
+            return True, last_shot_time  # 게임 오버
+    
+    return False, last_shot_time
 
 def update_game_state(my_character, command, my_map, camera_x, FIXED_X_POSITION, joystick):
    max_camera_x = (len(my_map.map_data[0]) * my_map.tile_size) - joystick.width
@@ -77,24 +76,24 @@ def update_game_state(my_character, command, my_map, camera_x, FIXED_X_POSITION,
    return camera_x
 
 def draw_game(my_image, my_draw, background, my_map, my_character, 
-             player_bullets, enemy_bullets, camera_x):
-   # 배경 그리기
-   my_image = background.copy()
-   my_draw = ImageDraw.Draw(my_image)
+             player_bullets, enemy_bullets, camera_x, joystick):
+    # 배경 그리기
+    my_image = background.copy()
+    my_draw = ImageDraw.Draw(my_image)
 
-   # 맵 그리기
-   my_map.draw(my_draw, int(camera_x))
+    # 맵 그리기
+    my_map.draw(my_draw, int(camera_x))
 
-   # 캐릭터 그리기
-   y = int(my_character.position[1])
-   my_image.paste(my_character.image.convert('RGB'), 
+    # 캐릭터 그리기
+    y = int(my_character.position[1])
+    my_image.paste(my_character.image.convert('RGB'), 
                  (int(my_character.position[0]), y), 
                  my_character.image.split()[3])
    
-   #적 그리기
-   for enemy in my_map.enemies:
+    # 적 그리기
+    for enemy in my_map.enemies:
         if enemy.state == 'alive':
-            enemy_screen_x = int(enemy.position[0] - camera_x)  # 카메라 위치 고려
+            enemy_screen_x = int(enemy.position[0] - camera_x)
             enemy_screen_y = int(enemy.position[1])
             my_image.paste(
                 enemy.image.convert('RGB'),
@@ -102,23 +101,31 @@ def draw_game(my_image, my_draw, background, my_map, my_character,
                 enemy.image.split()[3]
             )
 
-
-   # 총알 그리기
-   for bullet in player_bullets:
-       my_image.paste(
-           bullet.image.convert('RGB'),
-           (int(bullet.position[0]), int(bullet.position[1])),
-           bullet.image.split()[3]
-       )
+    # 총알 그리기
+    for bullet in player_bullets:
+        my_image.paste(
+            bullet.image.convert('RGB'),
+            (int(bullet.position[0]), int(bullet.position[1])),
+            bullet.image.split()[3]
+        )
        
-   for bullet in enemy_bullets:
-       my_image.paste(
-           bullet.image.convert('RGB'),
-           (int(bullet.position[0]), int(bullet.position[1])),
-           bullet.image.split()[3]
-       )
+    # 적 총알 그리기 - 카메라 위치 고려
+    for bullet in enemy_bullets:
+        if bullet.state == 'active':
+            screen_x = int(bullet.world_x - camera_x - bullet.width/2)
+            screen_y = int(bullet.position[1])
+            
+            print(f"Drawing enemy bullet: world_x={bullet.world_x}, camera_x={camera_x}, screen_x={screen_x}, screen_y={screen_y}")
+            
+            # 화면 범위 체크 (-10은 여유값)
+            if -10 <= screen_x <= joystick.width + 10:
+                my_image.paste(
+                    bullet.image.convert('RGB'),
+                    (screen_x, screen_y),
+                    bullet.image.split()[3]
+                )
    
-   return my_image, my_draw
+    return my_image, my_draw
 
 def main():
    joystick = Joystick()
@@ -167,7 +174,7 @@ def main():
        game_over, last_shot_time = update_bullets(bullets, enemy_bullets, 
                                                 my_character, enemies, 
                                                 last_shot_time, joystick, 
-                                                SHOT_COOLDOWN)
+                                                SHOT_COOLDOWN,camera_x)
        if game_over:
            print("Game Over!")
            break
@@ -176,7 +183,7 @@ def main():
                                   FIXED_X_POSITION, joystick)
        
        my_image, my_draw = draw_game(my_image, my_draw, background, my_map, 
-                                   my_character, bullets, enemy_bullets, camera_x)
+                                   my_character, bullets, enemy_bullets, camera_x, joystick)
        
        joystick.disp.image(my_image)
 

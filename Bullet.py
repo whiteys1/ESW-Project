@@ -1,7 +1,7 @@
 import numpy as np
 from PIL import Image
 from asset.BulletPattern import bullet_pattern, bullet_color_map
-from asset.EnemyBullet import enemy_bullet_pattern, enemy_bullet_color_map
+from asset.EnemyBulletPattern import enemy_bullet_pattern, enemy_bullet_color_map
 
 # Bullet.py
 class Bullet:
@@ -49,13 +49,46 @@ class PlayerBullet(Bullet):
 class EnemyBullet(Bullet):
     def __init__(self, start_x, start_y):
         super().__init__(start_x, start_y, 'left')
-        # 적 총알 패턴으로 이미지 생성
+        # world 좌표로 시작
+        self.world_x = start_x
+        self.position = np.array([self.world_x - self.width/2, 
+                                start_y - self.height/2,
+                                self.world_x + self.width/2,
+                                start_y + self.height/2])
+        
+        # 이미지 생성
         self.image = Image.new('RGBA', (self.width, self.height))
         for y in range(10):
             for x in range(10):
-                self.image.putpixel((x, y), enemy_bullet_color_map[enemy_bullet_pattern[y][x]])
+                color = enemy_bullet_color_map[enemy_bullet_pattern[y][x]]
+                self.image.putpixel((x, y), color)
 
+    def move(self):
+        if self.state == 'active':
+            # 월드 좌표 업데이트
+            self.world_x += self.speed
+            # position 업데이트
+            self.position[0] = self.world_x - self.width/2
+            self.position[2] = self.world_x + self.width/2
+    
     def check_collision_with_player(self, player):
         if self.state != 'active':
             return False
-        return self.overlap(self.position, player.position)
+        
+        # 총알의 충돌 박스
+        bullet_box = np.array([
+            self.world_x - self.width/2,  # left
+            self.position[1],             # top
+            self.world_x + self.width/2,  # right
+            self.position[3]              # bottom
+        ])
+    
+        # 플레이어의 충돌 박스
+        player_box = np.array([
+            player.world_x,                # left
+            player.world_y,                # top
+            player.world_x + player.width, # right
+            player.world_y + player.height # bottom
+        ])
+    
+        return self.overlap(bullet_box, player_box)
