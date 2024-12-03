@@ -125,9 +125,9 @@ class EnemyBullet(Bullet):
         # 두 집합의 교집합이 있으면 충돌
         return len(bullet_pixels.intersection(player_pixels)) > 0
 
-class BossBullet(Bullet):
+class BossBullet(EnemyBullet):
    def __init__(self, start_x, start_y, direction):
-       super().__init__(start_x, start_y, direction)
+       super().__init__(start_x, start_y)
        self.width = 15
        self.height = 15
        self.state = 'active'
@@ -164,14 +164,31 @@ class BossBullet(Bullet):
                    self.image.putpixel((scaled_x, scaled_y), color)
    
    def move(self):
-       if self.state == 'active':
-           self.world_x += self.speed_x
-           self.position[0] += self.speed_x  
-           self.position[2] += self.speed_x
-           self.position[1] += self.speed_y
-           self.position[3] += self.speed_y
+        if self.state == 'active':
+            self.world_x += self.speed
+            self.position[0] += self.speed
+            self.position[2] += self.speed
+            
+            if hasattr(self, 'speed_y'):
+                self.position[1] += self.speed_y
+                self.position[3] += self.speed_y
            
    def check_collision_with_player(self, player):
-       if self.state != 'active':
-           return False
-       return self.overlap(self.position, player.position)
+    if self.state != 'active':
+        return False
+
+    bullet_box = np.array([
+        self.world_x - self.width/2,
+        self.position[1],
+        self.world_x + self.width/2,
+        self.position[3]
+    ])
+
+    player_box = np.array([
+        player.world_x,
+        player.world_y,
+        player.world_x + player.width,
+        player.world_y + player.height
+    ])
+
+    return self.overlap(bullet_box, player_box)

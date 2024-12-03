@@ -5,6 +5,7 @@ from Character import Character
 from Joystick import Joystick
 from Map import Map
 from Boss import Boss
+from PIL import ImageFont
 
 def handle_input(joystick):
    command = {'move': False, 'up_pressed': False, 'down_pressed': False, 
@@ -37,14 +38,13 @@ def update_bullets(player_bullets, enemy_bullets, my_character, enemies, last_sh
 
     # 적 총알 발사
     for enemy in enemies:
-        for enemy in enemies:
-            if enemy.state == 'alive':
-                if isinstance(enemy, Boss):  # 보스인 경우
-                    new_bullets = enemy.shoot()  # shoot 메서드 호출
-                    enemy_bullets.extend(new_bullets)
-                else:  # 일반 적인 경우
-                    if enemy.can_shoot():
-                        enemy_bullets.append(EnemyBullet(enemy.world_x, enemy.world_y))
+        if enemy.state == 'alive':
+            if isinstance(enemy, Boss):  # 보스인 경우
+                new_bullets = enemy.shoot()  # shoot 메서드 호출
+                enemy_bullets.extend(new_bullets)
+            else:  # 일반 적인 경우
+                if enemy.can_shoot():
+                    enemy_bullets.append(EnemyBullet(enemy.world_x, enemy.world_y))
 
 
     # 총알 이동 및 제거
@@ -85,24 +85,18 @@ def update_game_state(my_character, command, my_map, camera_x, FIXED_X_POSITION,
    return camera_x
 
 def draw_game(my_image, my_draw, background, my_map, my_character, 
-             player_bullets, enemy_bullets, camera_x, joystick):
-    # 배경 그리기
-    my_image = background.copy()
-    my_draw = ImageDraw.Draw(my_image)
+            player_bullets, enemy_bullets, camera_x, joystick):
+   # 배경 그리기
+   my_image = background.copy()
+   my_draw = ImageDraw.Draw(my_image)
 
-    # 맵 그리기
-    my_map.draw(my_draw, int(camera_x))
+   # 맵 그리기
+   my_map.draw(my_draw, int(camera_x))
 
-    # 캐릭터 그리기
-    y = int(my_character.position[1])
-    my_image.paste(my_character.image.convert('RGB'), 
-                 (int(my_character.position[0]), y), 
-                 my_character.image.split()[3])
-   
-    # 적 그리기
-    for enemy in my_map.enemies:
+   # 적 그리기
+   for enemy in my_map.enemies:
         if enemy.state == 'alive':
-            enemy.update_position(camera_x)  # 메서드 이름 다시 수정
+            enemy.update_position(camera_x)
             enemy_screen_x = int(enemy.position[0])
             enemy_screen_y = int(enemy.position[1])
             my_image.paste(
@@ -110,30 +104,71 @@ def draw_game(my_image, my_draw, background, my_map, my_character,
                 (enemy_screen_x, enemy_screen_y),
                 enemy.image.split()[3]
             )
-
-    # 총알 그리기
-    for bullet in player_bullets:
-        my_image.paste(
-            bullet.image.convert('RGB'),
-            (int(bullet.position[0]), int(bullet.position[1])),
-            bullet.image.split()[3]
-        )
-       
-    # 적 총알 그리기 - 카메라 위치 고려
-    for bullet in enemy_bullets:
-        if bullet.state == 'active':
-            screen_x = int(bullet.world_x - camera_x - bullet.width/2)
-            screen_y = int(bullet.position[1])
             
-            # 화면 범위 체크 (-10은 여유값)
-            if -10 <= screen_x <= joystick.width + 10:
-                my_image.paste(
-                    bullet.image.convert('RGB'),
-                    (screen_x, screen_y),
-                    bullet.image.split()[3]
-                )
-   
-    return my_image, my_draw
+            # 보스일 경우 체력바와 경고 메시지 표시
+            if isinstance(enemy, Boss):
+                boss_distance = abs(my_character.world_x - enemy.world_x)
+                
+                if boss_distance < joystick.width:
+                    # 체력바 그리기
+                    my_draw.rectangle([(10, 10), (230, 25)], fill=(128,128,128))
+                    health_width = int(220 * (enemy.current_hp / enemy.max_hp))
+                    my_draw.rectangle([(10, 10), (10 + health_width, 25)], fill=(255,0,0))
+                    
+                    # Warning 표시 로직
+                    hp_percent = enemy.current_hp / enemy.max_hp
+                    
+                    # 처음 화면에 들어왔을 때
+                    if not hasattr(enemy, 'first_warning_shown'):
+                        enemy.first_warning_shown = True
+                        enemy.warning_time = 60
+                    
+                    # HP 60% 도달했을 때
+                    if not hasattr(enemy, 'hp60_warned') and hp_percent <= 0.6:
+                        enemy.hp60_warned = True
+                        enemy.warning_time = 60
+                    
+                    # HP 30% 도달했을 때    
+                    if not hasattr(enemy, 'hp30_warned') and hp_percent <= 0.3:
+                        enemy.hp30_warned = True
+                        enemy.warning_time = 60
+                    
+                    # Warning 타이머 관리 및 표시
+                    if hasattr(enemy, 'warning_time') and enemy.warning_time > 0:
+                        enemy.warning_time -= 1
+                        font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 30)
+                        text_width = font.getlength("WARNING!")
+                        text_pos = ((joystick.width - text_width) // 2, 100)
+                        my_draw.text(text_pos, "WARNING!", font=font, fill=(255,0,0))
+
+   # 캐릭터 그리기
+   y = int(my_character.position[1])
+   my_image.paste(my_character.image.convert('RGB'), 
+                (int(my_character.position[0]), y), 
+                my_character.image.split()[3])
+
+   # 총알 그리기
+   for bullet in player_bullets:
+       my_image.paste(
+           bullet.image.convert('RGB'),
+           (int(bullet.position[0]), int(bullet.position[1])),
+           bullet.image.split()[3]
+       )
+      
+   # 적 총알 그리기
+   for bullet in enemy_bullets:
+       if bullet.state == 'active':
+           screen_x = int(bullet.world_x - camera_x - bullet.width/2)
+           screen_y = int(bullet.position[1])
+           
+           if -10 <= screen_x <= joystick.width + 10:
+               my_image.paste(
+                   bullet.image.convert('RGB'),
+                   (screen_x, screen_y),
+                   bullet.image.split()[3]
+               )
+  
+   return my_image, my_draw
 
 def main():
    joystick = Joystick()
@@ -156,10 +191,10 @@ def main():
         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0,0,0],
+        [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0],
         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
