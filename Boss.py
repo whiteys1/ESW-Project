@@ -25,6 +25,21 @@ class Boss:
         self.max_hp = 50
         self.current_hp = self.max_hp
         
+        # HP 관련 warning 시스템
+        self.warning_time = 0
+        self.first_warning_shown = False
+        self.hp60_warning_shown = False
+        self.hp30_warning_shown = False
+        
+        # 레이저 시스템
+        self.laser_warning = False
+        self.laser_active = False
+        self.laser_warning_time = 40  # 1초
+        self.laser_cooldown = 80  # 2초
+        self.laser_timer = 0
+        self.selected_rows = []
+        self.selected_cols = []
+        
         # 공격 패턴 시스템
         self.attack_pattern = 'basic'
         self.last_shot_time = 0
@@ -34,7 +49,7 @@ class Boss:
             'phase3': 20
         }
         
-        # 보스 이미지 생성
+        # 이미지 생성
         self.image = self.create_boss_image()
 
     def create_boss_image(self):
@@ -65,19 +80,69 @@ class Boss:
             self.state = 'die'
             return
             
-        # 패턴 체크 및 변경
+        # HP에 따른 패턴 변경 및 warning 설정
         hp_percent = self.current_hp / self.max_hp
-        if hp_percent <= 0.3:
+        if hp_percent <= 0.3 and not self.hp30_warning_shown:
+            self.hp30_warning_shown = True
+            self.warning_time = 60
             self.attack_pattern = 'phase3'
-        elif hp_percent <= 0.6:
+        elif hp_percent <= 0.6 and not self.hp60_warning_shown:
+            self.hp60_warning_shown = True
+            self.warning_time = 60
             self.attack_pattern = 'phase2'
+
+    def prepare_laser_attack(self, map_data,camera_x):
+        if self.laser_cooldown > 0 or self.laser_warning or self.laser_active:
+            return
+            
+        if self.attack_pattern == 'basic':
+            return
+
+        # 레이저 가로범위
+        valid_rows = range(int(len(map_data) * 0.3), len(map_data))
+
+        #레이저 세로범위
+        screen_start_col = camera_x // 24  # 타일 크기로 나누어 타일 인덱스 계산, 카메라 안에 들어오게
+        screen_tiles = 240 // 24  # 화면 너비를 타일 수로 변환
+        valid_cols = range(int(screen_start_col), int(screen_start_col + screen_tiles))
+        
+        self.selected_rows = []
+        self.selected_cols = []
+        
+        if self.attack_pattern == 'phase2':
+            self.selected_rows.append(np.random.choice(list(valid_rows)))
+        else:
+            self.selected_rows.append(np.random.choice(list(valid_rows)))
+            self.selected_cols.append(np.random.choice(list(valid_cols)))
+            
+        self.laser_warning = True
+        self.laser_warning_time = 60
+
+    def update_laser(self):
+        if self.laser_warning:
+            self.laser_warning_time -= 1
+            if self.laser_warning_time <= 0:
+                self.laser_warning = False
+                self.laser_active = True
+                self.laser_timer = 30
+        
+        if self.laser_active:
+            self.laser_timer -= 1
+            if self.laser_timer <= 0:
+                self.laser_active = False
+                self.laser_cooldown = 120
+                self.selected_rows = []
+                self.selected_cols = []
+                
+        if self.laser_cooldown > 0:
+            self.laser_cooldown -= 1
 
     def can_shoot(self):
         if self.state != 'alive':
             return False
             
         self.last_shot_time += 1
-        cooldown = self.shot_cooldowns.get(self.attack_pattern, 45)
+        cooldown = self.shot_cooldowns[self.attack_pattern]
         
         if self.last_shot_time >= cooldown:
             self.last_shot_time = 0
@@ -98,8 +163,8 @@ class Boss:
                 bullets.append(BossBullet(self.world_x, center_y, direction))
                 
         elif self.attack_pattern == 'phase2':
-            # 부채꼴 5방향
-            angles = [-30, -15, 0, 15, 30]
+            # 특정 각도로 2발 발사
+            angles = [-30, 30]
             for angle in angles:
                 bullet = BossBullet(self.world_x, center_y, 'left')
                 bullet.speed_x = -8 * np.cos(np.radians(angle))
@@ -107,8 +172,8 @@ class Boss:
                 bullets.append(bullet)
                 
         else:  # phase3
-            # 전방위 7방향
-            angles = [-45, -30, -15, 0, 15, 30, 45]
+            # 특정 각도로 2발 발사 (패턴 동일하게 유지)
+            angles = [-30, 30]
             for angle in angles:
                 bullet = BossBullet(self.world_x, center_y, 'left')
                 bullet.speed_x = -8 * np.cos(np.radians(angle))

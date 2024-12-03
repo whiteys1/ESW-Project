@@ -70,7 +70,9 @@ def update_bullets(player_bullets, enemy_bullets, my_character, enemies, last_sh
     return False, last_shot_time
 
 def update_game_state(my_character, command, my_map, camera_x, FIXED_X_POSITION, joystick):
+   game_over = False
    max_camera_x = (len(my_map.map_data[0]) * my_map.tile_size) - joystick.width
+
    if my_character.world_x <= max_camera_x + FIXED_X_POSITION:
        camera_x = int(my_character.world_x - FIXED_X_POSITION)
        my_character.position[0] = FIXED_X_POSITION
@@ -79,10 +81,40 @@ def update_game_state(my_character, command, my_map, camera_x, FIXED_X_POSITION,
        camera_x = max_camera_x
 
    camera_x = max(0, min(camera_x, max_camera_x))
+
+   # 보스의 레이저 공격 업데이트
+   for enemy in my_map.enemies:
+        if isinstance(enemy, Boss) and enemy.state == 'alive':
+            enemy.update_laser()
+            if enemy.laser_cooldown <= 0 and not enemy.laser_warning and not enemy.laser_active:
+                enemy.prepare_laser_attack(my_map.map_data, camera_x)
+                
+            # 레이저 충돌 체크
+            if enemy.laser_active:
+                # 캐릭터의 충돌 박스 계산
+                char_left = int(my_character.world_x)
+                char_right = int(my_character.world_x + my_character.width)
+                char_top = int(my_character.world_y)
+                char_bottom = int(my_character.world_y + my_character.height)
+
+                # 가로 레이저 충돌 체크
+                for row in enemy.selected_rows:
+                    laser_y = row * my_map.tile_size
+                    if char_top <= laser_y + my_map.tile_size and char_bottom >= laser_y:
+                        game_over = True
+                        break
+
+                # 세로 레이저 충돌 체크
+                for col in enemy.selected_cols:
+                    laser_x = col * my_map.tile_size
+                    if char_left <= laser_x + my_map.tile_size and char_right >= laser_x:
+                        game_over = True
+                        break
+
    my_character.move(command, my_map)
    my_character.update_screen_position(camera_x)
    
-   return camera_x
+   return game_over,camera_x
 
 def draw_game(my_image, my_draw, background, my_map, my_character, 
             player_bullets, enemy_bullets, camera_x, joystick):
@@ -119,7 +151,7 @@ def draw_game(my_image, my_draw, background, my_map, my_character,
                     hp_percent = enemy.current_hp / enemy.max_hp
                     
                     # 처음 화면에 들어왔을 때
-                    if not hasattr(enemy, 'first_warning_shown'):
+                    if not enemy.first_warning_shown:
                         enemy.first_warning_shown = True
                         enemy.warning_time = 60
                     
@@ -194,7 +226,7 @@ def main():
         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6,0],
+        [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6],
         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
         [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
@@ -222,9 +254,13 @@ def main():
            print("Game Over!")
            break
            
-       camera_x = update_game_state(my_character, command, my_map, camera_x, 
+       laser_game_over,camera_x = update_game_state(my_character, command, my_map, camera_x, 
                                   FIXED_X_POSITION, joystick)
        
+       if laser_game_over:
+           print("Game Over!!")
+           break
+
        my_image, my_draw = draw_game(my_image, my_draw, background, my_map, 
                                    my_character, bullets, enemy_bullets, camera_x, joystick)
        

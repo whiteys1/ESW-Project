@@ -12,6 +12,11 @@ class Map:
         self.tile_size = tile_size
         self.map_data = map_data
         self.enemies = self.create_enemies()  # 여기에 추가
+        # 레이저 시스템을 위한 색상 정의
+        self.warning_color = (255, 0, 0, 128)  # 반투명 빨강
+        self.laser_color = (255, 255, 0, 180)  # 반투명 노랑
+
+
 
     def create_enemies(self):
         enemies = []
@@ -37,25 +42,49 @@ class Map:
         return enemies
         
     def draw(self, canvas, camera_x):
+        # 현재 camera_x 저장
+        current_camera_x = int(camera_x)  # 정수로 고정하여 흔들림 방지
+    
         # 화면에 그려질 타일의 시작과 끝 인덱스 계산
-        start_col = int(camera_x // self.tile_size)
+        start_col = int(current_camera_x // self.tile_size)
         visible_tiles = (self.width // self.tile_size) + 2
         end_col = min(len(self.map_data[0]), start_col + visible_tiles)
-        
-        # 각 타일을 화면상의 적절한 위치에 그림
+    
+        # 맵 그리기
         for y in range(len(self.map_data)):
             for x in range(start_col, end_col):
-                screen_x = (x * self.tile_size) - camera_x
+                screen_x = (x * self.tile_size) - current_camera_x
                 screen_y = y * self.tile_size
-                
+            
                 if x < len(self.map_data[0]):  # 맵 범위 체크
                     tile_type = self.map_data[y][x]
                     if tile_type == 1:  # grass_ground_pattern 사용
-                        # 패턴의 각 픽셀을 그림
-                        for py in range(24):  # 24x24 패턴
+                        for py in range(24):
                             for px in range(24):
                                 pixel_color = color_map[grass_ground_pattern[py][px]]
                                 canvas.point((screen_x + px, screen_y + py), fill=pixel_color)
+
+        # 레이저 그리기 (맵 그린 후에 처리)
+        for enemy in self.enemies:
+            if isinstance(enemy, Boss):
+                if enemy.laser_warning or enemy.laser_active:
+                    color = list(self.warning_color if enemy.laser_warning else self.laser_color)
+                
+                    # 가로 레이저 그리기
+                    for row in enemy.selected_rows:
+                        y = row * self.tile_size
+                        canvas.rectangle([
+                            (0, y),
+                            (self.width, y + self.tile_size)
+                        ], fill=tuple(color), outline=None)
+                
+                    # 세로 레이저 그리기
+                    for col in enemy.selected_cols:
+                        x = (col * self.tile_size) - current_camera_x
+                        canvas.rectangle([
+                            (x, 0),
+                            (x + self.tile_size, self.height)
+                        ], fill=tuple(color), outline=None)
 
     def get_tile(self, x, y):
         """실제 월드 좌표를 타일 좌표로 변환하여 해당 타일 값을 반환"""
