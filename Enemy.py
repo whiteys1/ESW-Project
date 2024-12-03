@@ -1,8 +1,6 @@
 import numpy as np
 from PIL import Image
-from asset.BlueAlienPattern import blue_alien_pattern, blue_alien_color_map
-from asset.GreenAlienPattern import green_alien_pattern, green_alien_color_map
-from asset.RedAlienPattern import red_alien_pattern, red_alien_color_map
+from asset.AlienPattern import alien_pattern, green_alien_color_map, blue_alien_color_map, red_alien_color_map
 
 class Enemy:
     def __init__(self, spawn_position, enemy_type=1):
@@ -29,15 +27,15 @@ class Enemy:
         self.type = enemy_type
         if enemy_type == 1:  # 초록
             self.max_hp = 1 
-            pattern = green_alien_pattern
+            pattern = alien_pattern
             color_map = green_alien_color_map
         elif enemy_type == 2:  # 파랑
             self.max_hp = 2
-            pattern = blue_alien_pattern
+            pattern = alien_pattern
             color_map = blue_alien_color_map
         else:  # 빨강
             self.max_hp = 3
-            pattern = red_alien_pattern
+            pattern = alien_pattern
             color_map = red_alien_color_map
         
         self.current_hp = self.max_hp

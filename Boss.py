@@ -163,8 +163,7 @@ class Boss:
                 bullets.append(BossBullet(self.world_x, center_y, direction))
                 
         elif self.attack_pattern == 'phase2':
-            # 특정 각도로 2발 발사
-            angles = [-30, 30]
+            angles = [-30, 0, 30]
             for angle in angles:
                 bullet = BossBullet(self.world_x, center_y, 'left')
                 bullet.speed_x = -8 * np.cos(np.radians(angle))
@@ -173,7 +172,7 @@ class Boss:
                 
         else:  # phase3
             # 특정 각도로 2발 발사 (패턴 동일하게 유지)
-            angles = [-30, 30]
+            angles = [-30,15 ,0, 15, 30]
             for angle in angles:
                 bullet = BossBullet(self.world_x, center_y, 'left')
                 bullet.speed_x = -8 * np.cos(np.radians(angle))

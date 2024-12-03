@@ -1,4 +1,4 @@
-from asset.BlockPattern import grass_ground_pattern, color_map
+from asset.BlockPattern import grass_ground_pattern, only_ground_pattern, color_map
 from Boss import Boss
 from PIL import Image, ImageDraw
 import numpy as np
@@ -62,6 +62,11 @@ class Map:
                         for py in range(24):
                             for px in range(24):
                                 pixel_color = color_map[grass_ground_pattern[py][px]]
+                                canvas.point((screen_x + px, screen_y + py), fill=pixel_color)
+                    if tile_type == 2:
+                        for py in range(24):
+                            for px in range(24):
+                                pixel_color = color_map[only_ground_pattern[py][px]]
                                 canvas.point((screen_x + px, screen_y + py), fill=pixel_color)
 
         # 레이저 그리기 (맵 그린 후에 처리)
