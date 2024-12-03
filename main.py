@@ -6,6 +6,50 @@ from Joystick import Joystick
 from Map import Map
 from Boss import Boss
 from PIL import ImageFont
+import time
+
+def draw_title_screen(joystick):
+    background = Image.new('RGB', (joystick.width, joystick.height), 'black')
+    my_draw = ImageDraw.Draw(background)
+    
+    title_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 24)
+    
+    # 첫 줄과 둘째 줄을 분리
+    title1 = "Resistance"
+    title2 = "Alien Attack"
+    
+    # 각 줄의 너비 계산
+    title1_width = title_font.getlength(title1)
+    title2_width = title_font.getlength(title2)
+    
+    # 각 줄의 위치 계산
+    title1_pos = ((joystick.width - title1_width) // 2, joystick.height // 3)
+    title2_pos = ((joystick.width - title2_width) // 2, joystick.height // 3 + 30)  # 30은 줄 간격
+    
+    guide_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", 16)
+    guide = "Press [A] to Start"
+    guide_width = guide_font.getlength(guide)
+    guide_pos = ((joystick.width - guide_width) // 2, joystick.height * 2 // 3)
+    
+    my_draw.text(title1_pos, title1, font=title_font, fill="white")
+    my_draw.text(title2_pos, title2, font=title_font, fill="white")
+    my_draw.text(guide_pos, guide, font=guide_font, fill="white")
+    
+    return background
+
+def draw_game_over_screen(joystick, is_clear=False):
+    # 배경
+    background = Image.new('RGB', (joystick.width, joystick.height), 'black')
+    my_draw = ImageDraw.Draw(background)
+    
+    # 결과 텍스트
+    result_font = ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", 32)
+    result_text = "GAME CLEAR!" if is_clear else "GAME OVER"
+    text_width = result_font.getlength(result_text)
+    text_pos = ((joystick.width - text_width) // 2, joystick.height // 2)
+    
+    my_draw.text(text_pos, result_text, font=result_font, fill="white")
+    return background
 
 def handle_input(joystick):
    command = {'move': False, 'up_pressed': False, 'down_pressed': False, 
@@ -205,66 +249,88 @@ def draw_game(my_image, my_draw, background, my_map, my_character,
 def main():
    joystick = Joystick()
    
-   background = Image.open("asset/background.jpeg") 
-   background = background.resize((joystick.width, joystick.height))
-   background = background.convert('RGB')
-   # 배경을 밝게 하기
-   white = Image.new('RGB', background.size, 'white')
-   background = Image.blend(background, white, 0.3)
-   my_image = background.copy()
+   while True:  # 전체 게임 루프
+       # 시작 화면
+       title_screen = draw_title_screen(joystick)
+       joystick.disp.image(title_screen)
        
-   my_draw = ImageDraw.Draw(my_image)
-   
-   my_character = Character(joystick.width, joystick.height)
-   facing_direction = 'right'
-   FIXED_X_POSITION = joystick.width/7
+       # A 버튼 대기
+       while joystick.button_A.value:
+           pass
+          
+       background = Image.open("asset/background.jpeg") 
+       background = background.resize((joystick.width, joystick.height))
+       background = background.convert('RGB')
+       white = Image.new('RGB', background.size, 'white')
+       background = Image.blend(background, white, 0.3)
+       my_image = background.copy()
+       my_draw = ImageDraw.Draw(my_image)
+  
+       my_character = Character(joystick.width, joystick.height)
+       facing_direction = 'right'
+       FIXED_X_POSITION = joystick.width/7
 
-   map_data = [
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
-    ]
-   
-   my_map = Map(width=240, height=240, tile_size=24, map_data=map_data)
-   #enemies = my_map.enemies
-
-   camera_x = 0
-   last_shot_time = 0
-   SHOT_COOLDOWN = 10
-
-   bullets = []  # 플레이어 총알
-   enemy_bullets = []  # 적 총알
-   enemies = my_map.enemies  # 적 리스트
-
-   while True:
-       command = handle_input(joystick)
+       map_data = [
+           [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+           [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+           [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+           [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+           [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+           [0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0],
+           [0,0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,6],
+           [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+           [0,0,0,0,0,0,0,0,0,3,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,4,0,0,0,0,0,0,0,0,0,0,1,1,1,1,0,0,0,0,0,0,0],
+           [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+       ]
        
-       game_over, last_shot_time = update_bullets(bullets, enemy_bullets, 
-                                                my_character, enemies, 
-                                                last_shot_time, joystick, 
-                                                SHOT_COOLDOWN,camera_x)
-       if game_over:
-           print("Game Over!")
-           break
+       my_map = Map(width=240, height=240, tile_size=24, map_data=map_data)
+
+       camera_x = 0
+       last_shot_time = 0
+       SHOT_COOLDOWN = 10
+
+       bullets = []
+       enemy_bullets = []  
+       enemies = my_map.enemies
+       game_clear = False
+
+       while True:
+           command = handle_input(joystick)
            
-       laser_game_over,camera_x = update_game_state(my_character, command, my_map, camera_x, 
-                                  FIXED_X_POSITION, joystick)
-       
-       if laser_game_over:
-           print("Game Over!!")
-           break
+           bullet_game_over, last_shot_time = update_bullets(bullets, enemy_bullets, 
+                                                   my_character, enemies, 
+                                                   last_shot_time, joystick, 
+                                                   SHOT_COOLDOWN,camera_x)
+           if bullet_game_over:
+               break
+               
+           laser_game_over,camera_x = update_game_state(my_character, command, my_map, camera_x, 
+                                     FIXED_X_POSITION, joystick)
+           
+           if laser_game_over:
+               break
 
-       my_image, my_draw = draw_game(my_image, my_draw, background, my_map, 
-                                   my_character, bullets, enemy_bullets, camera_x, joystick)
-       
-       joystick.disp.image(my_image)
+           for enemy in enemies:
+               if isinstance(enemy, Boss) and enemy.state == 'die':
+                   game_clear = True
+                   break
 
+           if game_clear:
+               break
+
+           my_image, my_draw = draw_game(my_image, my_draw, background, my_map, 
+                                      my_character, bullets, enemy_bullets, camera_x, joystick)
+           
+           joystick.disp.image(my_image)
+
+       # 결과 화면
+       result_screen = draw_game_over_screen(joystick, game_clear)
+       joystick.disp.image(result_screen)
+       time.sleep(3)
+
+       # A 버튼 대기 
+       while joystick.button_A.value:
+           pass
+           
 if __name__ == '__main__':
    main()

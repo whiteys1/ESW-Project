@@ -57,7 +57,6 @@ class PlayerBullet(Bullet):
             if enemy.state == 'alive':
                 # 적과의 충돌 체크
                 if self.overlap(self.position, enemy.position):
-                    print(f"Bullet at {bullet_world_x} hit enemy at {enemy.position[0]}")
                     enemy.take_damage()
                     self.state = 'hit'
                     break
@@ -75,6 +74,14 @@ class EnemyBullet(Bullet):
         
         # 이미지 생성
         self.image = Image.new('RGBA', (self.width, self.height))
+        # 충돌 마스크 생성
+        self.collision_mask = []
+        for y in range(10):  # 10x10 크기의 총알
+            for x in range(10):
+                color = enemy_bullet_color_map[enemy_bullet_pattern[y][x]]
+                if color[3] > 0:  # 투명하지 않은 픽셀만 충돌 체크
+                    self.collision_mask.append((x, y))
+
         for y in range(10):
             for x in range(10):
                 color = enemy_bullet_color_map[enemy_bullet_pattern[y][x]]
